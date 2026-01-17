@@ -45,7 +45,7 @@ sends it over the socket.
    {
      FILE *fp;
      struct hostent *hp;
-     struct sockaddr_in sin;
+     struct sockaddr_in sin; // sin -> Socket Internet
      char *host;
      char buf[MAX_LINE];
      int s;
@@ -121,7 +121,7 @@ out the characters that arrive on the connection.
 
 int main()
 {
-    struct sockaddr_in sin;
+    struct sockaddr_in sin;  // sin -> Socket Internet
     char buf[MAX_LINE];
     int buf_len;
     socklen_t addr_len;
@@ -189,3 +189,106 @@ The client will behave like a one-way chat window.  Any text entered into the cl
 > ### HINT: 
 > You may find it helpful to split and move right/down to see both program windows.
 > ![img.png](images/split_move_right.png)
+
+# Socket Address Structs
+
+```c++
+struct in_addr {
+    uint32_t s_addr;   /* IPv4 address, network byte order */
+};
+
+// IPv4
+struct sockaddr_in {
+    short   sin_family;       /* = AF_INET */
+    u_short sin_port;         /* = htons (PORT) */
+    struct  in_addr sin_addr; /* IPv4 address */
+    char    sin_zero[8];      /* unused padding */
+} sin;
+
+
+struct in6_addr {
+    unsigned char s6_addr[16];
+};
+
+// IPv6
+struct sockaddr_in6 {
+    sa_family_t     sin6_family;   /* AF_INET6 */
+    in_port_t       sin6_port;     /* port number (network byte order) */
+    uint32_t        sin6_flowinfo; /* IPv6 flow information */
+    struct in6_addr sin6_addr;     /* IPv6 address */
+    uint32_t        sin6_scope_id; /* Scope ID (for link-local addresses) */
+};
+
+...
+
+// Code to use the Daytime protocol (RFC867)
+// Historically used to ask a server for the current date and time
+int s = socket (AF_INET, SOCK_STREAM, 0);
+bzero (&sin, sizeof (sin));
+sin.sin_family = AF_INET;
+sin.sin_port = htons (13);        /* daytime port */
+sin.sin_addr.s_addr = htonl (IP_ADDRESS);
+connect (s, (sockaddr *) &sin, sizeof (sin));
+while ((n = recv(s, buf, sizeof(buf), 0)) > 0)
+    write(1, buf, n);
+```
+
+# Handling Address Types
+
+
+## Byte Order
+
+Networks use a standard byte order called network byte order, which is **big
+endian**. A machine may use a different byte order (often little
+endian), so values must be converted.
+
+> ### Big vs Little Endian
+> * Little Endian: Stores least significant byte in the lowest address
+> * Big Endian: Stores the most significant byte in the highest address
+>
+> ### TLDR  
+> If you don't convert properly, you will be reading/writing bytes in the 
+> wrong order.
+
+The following struct fields are in network byte order (Big Endian)
+* `sin_port` (IPv4) 
+* `sin_port6` (IPv6)
+* `sin_addr.s_addr`  (IPv4)
+* `sin6_addr` (IPv6)
+
+## `htonl()` Host to Network, 32 bits
+Used to convert a 32-bit value from host byte order to network byte order (big endian).
+### Example
+```c++
+sin.sin_addr.s_addr = htonl (IP_ADDRESS);  // Store 32 bit address in network format 
+```
+
+## `htons()`: Host to Network, 16 bits
+Used to convert a 16-bit value from host byte order to network byte order (big endian).
+### Example
+```cpp
+sin.sin_port = htons (13);  // Store 16 bit port in network format
+```
+
+## `ntohl()` Network to Host, 32 bits
+Used to convert a 32-bit value from network byte order (big endian) to host byte order.
+### Example
+```c++
+uint32_t ip = ntohl(sin.sin_addr.s_addr);
+```
+
+## `ntohs()`: Network to Host, 16 bits
+Used to convert a 16-bit value from network byte order (big endian) to host byte order.
+### Example
+```c++
+u_short port = ntohl(sin.sin_port);
+```
+
+* 
+* Remember to always convert!
+All address types begin with family
+sa_family in sockaddr tells you actual type
+Not all addresses are the same size
+e.g., struct sockaddr_in6 is typically 28 bytes, yet generic  struct sockaddr is only 16 bytes
+So most calls require passing around socket length
+New sockaddr_storage is big enough

@@ -13,7 +13,7 @@
 
 int main()
 {
-    struct sockaddr_in sin;
+    struct sockaddr_in sin;  // sin -> Socket Internet
     char buf[MAX_LINE];
     int buf_len;
     socklen_t addr_len;
