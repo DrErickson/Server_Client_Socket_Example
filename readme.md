@@ -190,7 +190,7 @@ The client will behave like a one-way chat window.  Any text entered into the cl
 > You may find it helpful to split and move right/down to see both program windows.
 > ![img.png](images/split_move_right.png)
 
-# Socket Address Structs
+# Client Skeleton (from class slides)
 
 ```c++
 struct in_addr {
@@ -231,6 +231,27 @@ sin.sin_addr.s_addr = htonl (IP_ADDRESS);
 connect (s, (sockaddr *) &sin, sizeof (sin));
 while ((n = recv(s, buf, sizeof(buf), 0)) > 0)
     write(1, buf, n);
+```
+
+# Server Skeleton (from class slides)
+
+```c++
+int s = socket (AF_INET, SOCK_STREAM, 0);
+struct sockaddr_in sin;
+bzero (&sin, sizeof (sin));
+sin.sin_family = AF_INET;
+sin.sin_port = htons (9999);
+sin.sin_addr.s_addr = htonl (INADDR_ANY);
+bind (s, (struct sockaddr *) &sin, sizeof (sin));
+listen (s, 5);
+
+while(true) {
+    socklen_t len = sizeof (sin);
+    int cfd = accept (s, (struct sockaddr *) &sin, &len);
+    /* cfd is new connection; you never read/write s */
+    do_something_with (cfd);
+    close (cfd);
+}
 ```
 
 # Handling Address Types
@@ -283,12 +304,3 @@ Used to convert a 16-bit value from network byte order (big endian) to host byte
 ```c++
 u_short port = ntohl(sin.sin_port);
 ```
-
-* 
-* Remember to always convert!
-All address types begin with family
-sa_family in sockaddr tells you actual type
-Not all addresses are the same size
-e.g., struct sockaddr_in6 is typically 28 bytes, yet generic  struct sockaddr is only 16 bytes
-So most calls require passing around socket length
-New sockaddr_storage is big enough
